@@ -67,7 +67,7 @@ The application supports two input formats:
 - Will be placed in "Uncategorized" category
 - Example: `Lightning Bolt`
 
-### Detailed Format
+### Detailed Format (compatible with Archidekt .txt exports)
 - Format: `{quantity}x {card name} ({set}) {collector number} [{category}]`
 - Example: `2x Lightning Bolt (LEA) 123 [Burn]`
 - All components must be present for detailed format parsing
