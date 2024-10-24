@@ -87,6 +87,26 @@ The application implements rate limiting to comply with Scryfall API guidelines:
 - node-cache - Caching solution
 - body-parser - Request body parsing middleware
 
+## Development Tools
+
+### Code Aggregator
+The repository includes `aggregate-code.js`, a handy utility for bundling up the project's source files into a single document. It's particularly useful for:
+- Getting a quick overview of the entire codebase
+- Preparing code for documentation or review
+- Creating shareable snapshots of your project
+
+Usage:
+```javascript
+node aggregate-code.js
+```
+
+The script will:
+- Generate an `aggregated_code.txt` file
+- Skip common directories like `node_modules` and `.git`
+- Format files with clear separators and headers
+- Exclude configuration and build files
+
+You can customize what gets included/excluded by modifying the exclude arrays in the script.
 
 ## License
 
