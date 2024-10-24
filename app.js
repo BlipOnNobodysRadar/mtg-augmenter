@@ -92,9 +92,11 @@ function parseInput(input) {
       return;
     }
 
-    // Check if line is just a category header
-    // This assumes category headers are single words/phrases without card-like formatting
-    if (!line.includes('x ') && !line.match(/\([^\)]+\)/)) {
+    // Check if this line is a category header by looking at the next line
+    const nextLine = index < lines.length - 1 ? lines[index + 1].trim() : '';
+    const isHeader = nextLine.match(/^\d+x\s/);
+    
+    if (isHeader && !line.includes('(') && !line.includes('[')) {
       currentCategory = line;
       console.log(`Line ${index + 1}: Found category header "${currentCategory}"`);
       if (!categoryMap.has(currentCategory)) {
