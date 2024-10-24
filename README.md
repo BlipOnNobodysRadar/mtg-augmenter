@@ -40,22 +40,23 @@ npm start
 
 3. Input your card list in either format:
    - Simple format: Just card names, one per line
-   - Detailed format: `2x Card Name (SET) 123 [Category]`
+   - Detailed format: `2x Card Name (SET) 123 [Category]` (compatible with Archidekt exports)
 
-Example input (compatible with .txt exports from Archidekt):
-```
-Creatures
-2x Lightning Bolt (LEA) 123 [Burn]
-3x Mountain (ZEN) 242 [Lands]
-Shock
-```
+### Simple Format Example
 
-Example input 2 (just put the card names in)
-```
-Blood Artist
-Bastion of Remembrace
-Norin the Wary
-```
+Input:
+![Simple Format Input](Simple%20In.png)
+
+Output:
+![Simple Format Output](Simple%20Out.png)
+
+### Detailed Format Example
+
+Input:
+![Detailed Format Input](Detailed%20In.png)
+
+Output:
+![Detailed Format Output](Detailed%20Out.png)
 
 ## Input Format Details
 
@@ -66,11 +67,13 @@ The application supports two input formats:
 - Just the card name
 - Will be placed in "Uncategorized" category
 - Example: `Lightning Bolt`
+- Automatically looks up the latest printing
 
-### Detailed Format (compatible with Archidekt .txt exports)
+### Detailed Format (default Archidekt export format)
 - Format: `{quantity}x {card name} ({set}) {collector number} [{category}]`
 - Example: `2x Lightning Bolt (LEA) 123 [Burn]`
 - All components must be present for detailed format parsing
+- Compatible with Archidekt exports
 
 ## API Rate Limiting
 

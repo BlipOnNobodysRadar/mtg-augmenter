@@ -83,6 +83,7 @@ function parseInput(input) {
   
   // We'll use a Map to group cards by category
   const categoryMap = new Map();
+  let currentCategory = 'Uncategorized';
   
   lines.forEach((line, index) => {
     line = line.trim();
@@ -91,37 +92,63 @@ function parseInput(input) {
       return;
     }
 
-    // Try to match detailed format: e.g., "2x Card Name (SET) 123 [Category]"
-    const detailedMatch = line.match(/^(\d+)x\s+(.+?)\s+\((\w+)\)\s+([\w*-]+)(?:\s+\*?\w*\*?)?\s+\[([^\]]+)\]$/);
+    // Check if line is just a category header
+    // This assumes category headers are single words/phrases without card-like formatting
+    if (!line.includes('x ') && !line.match(/\([^\)]+\)/)) {
+      currentCategory = line;
+      console.log(`Line ${index + 1}: Found category header "${currentCategory}"`);
+      if (!categoryMap.has(currentCategory)) {
+        categoryMap.set(currentCategory, { name: currentCategory, cards: [] });
+      }
+      return;
+    }
 
-    if (detailedMatch) {
-      const [ , count, name, set, number, category ] = detailedMatch;
-      console.log(`Line ${index + 1}: Parsed card - Count: ${count}, Name: "${name}", Set: "${set}", Number: "${number}", Category: "${category}"`);
+    // Try to match Archidekt detailed format: "1x Card Name (set) number [Category{tags}]"
+    // Also handles cards with "//" in their names
+    const archidektMatch = line.match(/^(\d+)x\s+([^(]+?)\s+\(([^)]+)\)\s+([\w\-*]+(?:\s*\*\w*\*)?)\s+\[([^\]]+?)(?:\{[^\}]+\})?\]$/);
+
+    // Try to match previous detailed format
+    const detailedMatch = !archidektMatch && line.match(/^(\d+)x\s+(.+?)\s+\((\w+)\)\s+([\w*-]+)(?:\s+\*?\w*\*?)?\s+\[([^\]]+)\]$/);
+
+    if (archidektMatch || detailedMatch) {
+      const match = archidektMatch || detailedMatch;
+      const [ , count, name, set, number, category ] = match;
+      console.log(`Line ${index + 1}: Parsed card - Count: ${count}, Name: "${name.trim()}", Set: "${set}", Number: "${number}", Category: "${category}"`);
       
-      // Get or create the category array
+      // Get or create the category
       if (!categoryMap.has(category)) {
         categoryMap.set(category, { name: category, cards: [] });
       }
       
       // Add the card to its category
-      categoryMap.get(category).cards.push({ count: parseInt(count), name, set, number, category });
+      categoryMap.get(category).cards.push({ 
+        count: parseInt(count), 
+        name: name.trim(), 
+        set, 
+        number, 
+        category 
+      });
     } else {
       // Treat as simple card name with default values
-      const name = line;
-      const count = 1;
-      const set = undefined; // Will fetch the default set from Scryfall
-      const number = 'N/A';
-      const category = 'Uncategorized';
-
-      console.log(`Line ${index + 1}: Parsed simple card - Count: ${count}, Name: "${name}", Set: "${set}", Number: "${number}", Category: "${category}"`);
-      
-      // Get or create the 'Uncategorized' category
-      if (!categoryMap.has(category)) {
-        categoryMap.set(category, { name: category, cards: [] });
+      const cardMatch = line.match(/^(?:(\d+)x\s+)?(.+)$/);
+      if (cardMatch) {
+        const [, count = "1", name] = cardMatch;
+        console.log(`Line ${index + 1}: Parsed simple card - Count: ${count}, Name: "${name}", Category: "${currentCategory}"`);
+        
+        // Get or create the current category
+        if (!categoryMap.has(currentCategory)) {
+          categoryMap.set(currentCategory, { name: currentCategory, cards: [] });
+        }
+        
+        // Add the card to the current category
+        categoryMap.get(currentCategory).cards.push({ 
+          count: parseInt(count), 
+          name: name.trim(), 
+          set: undefined, 
+          number: 'N/A', 
+          category: currentCategory 
+        });
       }
-      
-      // Add the card to the 'Uncategorized' category
-      categoryMap.get(category).cards.push({ count, name, set, number, category });
     }
   });
 
