@@ -1,0 +1,208 @@
+<!-- views/result.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Augmented MTG Card List</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    /* Button Styling */
+    #copyButton, #clearCacheButton {
+      padding: 10px 20px;
+      margin-right: 10px;
+      margin-bottom: 20px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    #clearCacheButton {
+      background-color: #dc3545; /* Red color for clear cache */
+    }
+
+    #copyButton:hover {
+      background-color: #0056b3;
+    }
+
+    #clearCacheButton:hover {
+      background-color: #c82333;
+    }
+
+    /* Card List Styling */
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .category {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 15px;
+      background-color: #f9f9f9;
+    }
+
+    .category-name {
+      font-size: 1.5em;
+      margin-bottom: 10px;
+      color: #333;
+      border-bottom: 2px solid #ccc;
+      padding-bottom: 5px;
+    }
+
+    .card {
+      margin-bottom: 15px;
+    }
+
+    .card-name {
+      font-weight: bold;
+      font-size: 1.2em;
+      color: #2c3e50;
+    }
+
+    .card-details {
+      margin-left: 20px;
+      margin-top: 5px;
+    }
+
+    .card-details p {
+      margin: 5px 0;
+    }
+
+    /* Failed Cards Section */
+    .failed-cards {
+      border: 1px solid #f5c6cb;
+      background-color: #f8d7da;
+      color: #721c24;
+      padding: 15px;
+      border-radius: 4px;
+    }
+
+    .failed-cards ul {
+      list-style-type: disc;
+      margin-left: 20px;
+    }
+
+    /* Back Button Styling */
+    .back-button {
+      display: inline-block;
+      margin-top: 20px;
+      color: #007bff;
+      text-decoration: none;
+      font-size: 1em;
+    }
+
+    .back-button:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Augmented MTG Card List</h1>
+
+    <!-- Action Buttons -->
+    <button id="copyButton">Copy to Clipboard</button>
+    <button id="clearCacheButton">Clear Cache</button>
+
+    <!-- Card List -->
+    <div class="card-list">
+      <% data.categories.forEach(category => { %>
+        <div class="category">
+          <% if (category.name.trim() !== 'Uncategorized') { %>
+            <div class="category-name"><%= category.name %></div>
+          <% } else { %>
+            <div class="category-name" style="display: none;"></div>
+          <% } %>
+
+          <% category.cards.forEach(card => { %>
+            <div class="card">
+              <div class="card-name"><%= card.count %>x <%= card.name %></div>
+              <div class="card-details">
+                <p><strong>Mana Cost:</strong> <%= card.mana_cost %></p>
+                <p><strong>Description:</strong> <%= card.description %></p>
+                <p><strong>Price (Nonfoil USD):</strong> <%= card.usd %></p>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% }) %>
+    </div>
+
+    <!-- Failed Cards Section -->
+    <% if (failedCards && failedCards.length > 0) { %>
+      <div class="failed-cards">
+        <h2>Failed to Fetch the Following Cards:</h2>
+        <ul>
+          <% failedCards.forEach(card => { %>
+            <li><strong><%= card.name %></strong>: <%= card.error %></li>
+          <% }) %>
+        </ul>
+      </div>
+    <% } %>
+
+    <!-- Back Button -->
+    <a href="/" class="back-button">&#8592; Back</a>
+
+    <!-- JavaScript for Button Functionality -->
+    <script>
+      // Function to copy text to clipboard using the Clipboard API
+      document.getElementById('copyButton').addEventListener('click', function() {
+        // Prepare the text to copy
+        let outputText = '';
+        <% data.categories.forEach(category => { %>
+          <% if (category.name.trim() !== 'Uncategorized') { %>
+            outputText += `<%= category.name %>\n`;
+          <% } %>
+          <% category.cards.forEach(card => { %>
+            outputText += `<%= card.count %>x <%= card.name %>\n`;
+            outputText += `  Mana Cost: <%= card.mana_cost %>\n`;
+            outputText += `  Description: <%= card.description.replace(/\n/g, '\\n') %>\n`;
+            outputText += `  Price (Nonfoil USD): <%= card.usd %>\n\n`;
+          <% }) %>
+        <% }) %>
+
+        navigator.clipboard.writeText(outputText).then(function() {
+          alert('Output copied to clipboard!');
+        }, function(err) {
+          console.error('Could not copy text: ', err);
+          alert('Error copying the output.');
+        });
+      });
+
+      // Function to clear the cache
+      document.getElementById('clearCacheButton').addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear the cache? This action cannot be undone.')) {
+          fetch('/clear-cache', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ confirm: true })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('Cache has been successfully cleared.');
+              // Optionally, you can reload the page or redirect
+              window.location.reload();
+            } else {
+              alert('Failed to clear cache.');
+            }
+          })
+          .catch(error => {
+            console.error('Error clearing cache:', error);
+            alert('An error occurred while clearing the cache.');
+          });
+        }
+      });
+    </script>
+  </div>
+</body>
+</html>

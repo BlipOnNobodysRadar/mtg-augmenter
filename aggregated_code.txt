@@ -1,0 +1,579 @@
+<file_start>
+File: /home/blip/Desktop/projects/mtg-augmenter/app.js
+// File: /home/blip/Desktop/projects/mtg-augmenter/app.js
+const express = require('express');
+const axios = require('axios');
+const bodyParser = require('body-parser');
+const path = require('path');
+const NodeCache = require('node-cache'); // Fixed: removed 'new'
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Initialize cache with a TTL of 24 hours
+const cardCache = new NodeCache({ stdTTL: 86400 }); // 24 hours
+
+// Set EJS as templating engine
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+// Middleware
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Debug middleware to log all requests
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  if (req.method === 'POST') {
+    console.log('Request body:', req.body);
+  }
+  next();
+});
+
+app.get('/', (req, res) => {
+  console.log('Rendering index page');
+  res.render('index');
+});
+
+app.post('/augment', async (req, res) => {
+  console.log('Starting /augment route');
+  const inputText = req.body.inputText;
+  console.log('Input text received:', inputText);
+
+  if (!inputText) {
+    console.log('No input text provided');
+    return res.status(400).send('No input text provided');
+  }
+
+  console.log('Parsing input...');
+  const parsedData = parseInput(inputText);
+  console.log('Parsed data:', JSON.stringify(parsedData, null, 2));
+
+  if (!parsedData.categories || parsedData.categories.length === 0) {
+    console.log('No valid categories found in input');
+    return res.status(400).send('No valid categories found in input');
+  }
+
+  try {
+    console.log('Flattening cards...');
+    const allCards = parsedData.categories.flatMap(category =>
+      category.cards.map(card => ({ ...card, category: category.name }))
+    );
+    console.log('Total cards to process:', allCards.length);
+
+    console.log('Fetching cards with rate limit...');
+    const { augmentedCards, failedCards } = await fetchCardsWithRateLimit(allCards, 100);
+    console.log('Cards fetched. Successful:', augmentedCards.length, 'Failed:', failedCards.length);
+
+    console.log('Reconstructing categories...');
+    const augmentedCategories = reconstructCategories(augmentedCards);
+    console.log('Categories reconstructed');
+
+    console.log('Rendering result page');
+    res.render('result', { data: { categories: augmentedCategories }, failedCards });
+  } catch (error) {
+    console.error('Error in /augment route:', error);
+    res.status(500).send(`An error occurred while processing the cards: ${error.message}`);
+  }
+});
+
+function parseInput(input) {
+  console.log('Starting input parsing');
+  const lines = input.split('\n');
+  console.log('Number of lines:', lines.length);
+  
+  // We'll use a Map to group cards by category
+  const categoryMap = new Map();
+  
+  lines.forEach((line, index) => {
+    line = line.trim();
+    if (line === '') {
+      console.log(`Line ${index + 1}: Empty line, skipping`);
+      return;
+    }
+
+    // Try to match detailed format: e.g., "2x Card Name (SET) 123 [Category]"
+    const detailedMatch = line.match(/^(\d+)x\s+(.+?)\s+\((\w+)\)\s+([\w*-]+)(?:\s+\*?\w*\*?)?\s+\[([^\]]+)\]$/);
+
+    if (detailedMatch) {
+      const [ , count, name, set, number, category ] = detailedMatch;
+      console.log(`Line ${index + 1}: Parsed card - Count: ${count}, Name: "${name}", Set: "${set}", Number: "${number}", Category: "${category}"`);
+      
+      // Get or create the category array
+      if (!categoryMap.has(category)) {
+        categoryMap.set(category, { name: category, cards: [] });
+      }
+      
+      // Add the card to its category
+      categoryMap.get(category).cards.push({ count: parseInt(count), name, set, number, category });
+    } else {
+      // Treat as simple card name with default values
+      const name = line;
+      const count = 1;
+      const set = undefined; // Will fetch the default set from Scryfall
+      const number = 'N/A';
+      const category = 'Uncategorized';
+
+      console.log(`Line ${index + 1}: Parsed simple card - Count: ${count}, Name: "${name}", Set: "${set}", Number: "${number}", Category: "${category}"`);
+      
+      // Get or create the 'Uncategorized' category
+      if (!categoryMap.has(category)) {
+        categoryMap.set(category, { name: category, cards: [] });
+      }
+      
+      // Add the card to the 'Uncategorized' category
+      categoryMap.get(category).cards.push({ count, name, set, number, category });
+    }
+  });
+
+  // Convert the Map to an array of categories
+  const categories = Array.from(categoryMap.values());
+  console.log('Parsing complete. Categories found:', categories.length);
+  
+  return { categories };
+}
+
+/**
+ * Fetches card information from Scryfall API with rate limiting.
+ * @param {Array} cards - Array of card objects to fetch.
+ * @param {number} delayMs - Delay in milliseconds between requests.
+ * @returns {object} Augmented card data and failed cards.
+ */
+async function fetchCardsWithRateLimit(cards, delayMs) {
+  const augmentedCards = [];
+  const failedCards = [];
+
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i];
+    try {
+      const info = await fetchCardInfo(card.name, card.set);
+      augmentedCards.push({
+        ...card,
+        mana_cost: info.mana_cost || 'N/A',
+        description: info.oracle_text || 'N/A',
+        usd: info.usd || 'N/A',
+        usd_foil: info.usd_foil || 'N/A'
+      });
+      console.log(`Fetched ${card.name} (${card.set || 'default'})`);
+    } catch (error) {
+      console.error(`Error fetching data for ${card.name} (${card.set || 'default'}):`, error.message);
+      failedCards.push({ name: card.name, set: card.set || 'default', error: error.response ? error.response.data.details : error.message });
+      augmentedCards.push({
+        ...card,
+        mana_cost: 'N/A',
+        description: 'N/A',
+        usd: 'N/A',
+        usd_foil: 'N/A'
+      });
+    }
+
+    if (i < cards.length - 1) {
+      await delay(delayMs);
+    }
+  }
+
+  return { augmentedCards, failedCards };
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchCardInfo(name, set) {
+  const cacheKey = `${name.toLowerCase()}_${set ? set.toLowerCase() : 'default'}`;
+  const cachedData = cardCache.get(cacheKey);
+
+  if (cachedData) {
+    console.log(`Cache hit for ${name} (${set || 'default'})`);
+    return cachedData;
+  }
+
+  const encodedName = encodeURIComponent(name);
+  let url = `https://api.scryfall.com/cards/named?exact=${encodedName}`;
+  if (set) {
+    url += `&set=${set}`;
+  }
+
+  try {
+    const response = await axios.get(url);
+    const data = response.data;
+    const cardInfo = {
+      mana_cost: data.mana_cost || 'N/A',
+      oracle_text: data.oracle_text || 'N/A',
+      usd: data.prices.usd || 'N/A',
+      usd_foil: data.prices.usd_foil || 'N/A'
+    };
+    cardCache.set(cacheKey, cardInfo);
+    console.log(`Fetched and cached ${name} (${set || 'default'})`);
+    return cardInfo;
+  } catch (error) {
+    console.error(`Error fetching data for ${name} (${set || 'default'}):`, error.response ? error.response.data.details : error.message);
+    throw error;
+  }
+}
+
+function reconstructCategories(augmentedCards) {
+  const categoriesMap = {};
+
+  augmentedCards.forEach(card => {
+    if (!categoriesMap[card.category]) {
+      categoriesMap[card.category] = { name: card.category, cards: [] };
+    }
+    categoriesMap[card.category].cards.push(card);
+  });
+
+  return Object.values(categoriesMap);
+}
+
+// Route to clear the cache
+app.post('/clear-cache', (req, res) => {
+  // Optional: Add authentication or confirmation mechanisms here
+  cardCache.flushAll();
+  console.log('Cache has been cleared.');
+  res.json({ success: true });
+});
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
+<file_end>
+
+<file_start>
+File: /home/blip/Desktop/projects/mtg-augmenter/package.json
+{
+  "name": "mtg-augmenter",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "A tool to augment MTG card lists with mana cost and descriptions using Scryfall API.",
+  "dependencies": {
+    "axios": "^1.7.7",
+    "body-parser": "^1.20.3",
+    "ejs": "^3.1.10",
+    "express": "^4.21.0",
+    "node-cache": "^5.1.2"
+  }
+}
+
+<file_end>
+
+<file_start>
+File: /home/blip/Desktop/projects/mtg-augmenter/public/styles.css
+/* public/styles.css */
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 20px;
+  }
+  
+  .container {
+    max-width: 800px;
+    margin: auto;
+    background: #fff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  
+  h1 {
+    text-align: center;
+    color: #333;
+  }
+  
+  textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+  
+  button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: #28a745;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  
+  button:hover {
+    background: #218838;
+  }
+  
+  pre {
+    white-space: pre-wrap;       /* Wrap lines */
+    word-wrap: break-word;       /* Break long words */
+    max-height: 80vh;            /* Max height */
+    overflow: auto;              /* Scroll if necessary */
+    background-color: #f8f9fa;   /* Light background for readability */
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  
+  a {
+    display: inline-block;
+    margin-top: 20px;
+    color: #007bff;
+    text-decoration: none;
+  }
+  
+  a:hover {
+    text-decoration: underline;
+  }
+  
+<file_end>
+
+<file_start>
+File: /home/blip/Desktop/projects/mtg-augmenter/views/index.ejs
+<!-- views/index.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MTG Card Augmenter</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>MTG Card Augmenter</h1>
+    <form action="/augment" method="POST">
+      <textarea name="inputText" rows="30" cols="100" placeholder="Paste your card list here..."></textarea>
+      <br>
+      <button type="submit">Augment List</button>
+    </form>
+  </div>
+</body>
+</html>
+
+<file_end>
+
+<file_start>
+File: /home/blip/Desktop/projects/mtg-augmenter/views/result.ejs
+<!-- views/result.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Augmented MTG Card List</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    /* Button Styling */
+    #copyButton, #clearCacheButton {
+      padding: 10px 20px;
+      margin-right: 10px;
+      margin-bottom: 20px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    #clearCacheButton {
+      background-color: #dc3545; /* Red color for clear cache */
+    }
+
+    #copyButton:hover {
+      background-color: #0056b3;
+    }
+
+    #clearCacheButton:hover {
+      background-color: #c82333;
+    }
+
+    /* Card List Styling */
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .category {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 15px;
+      background-color: #f9f9f9;
+    }
+
+    .category-name {
+      font-size: 1.5em;
+      margin-bottom: 10px;
+      color: #333;
+      border-bottom: 2px solid #ccc;
+      padding-bottom: 5px;
+    }
+
+    .card {
+      margin-bottom: 15px;
+    }
+
+    .card-name {
+      font-weight: bold;
+      font-size: 1.2em;
+      color: #2c3e50;
+    }
+
+    .card-details {
+      margin-left: 20px;
+      margin-top: 5px;
+    }
+
+    .card-details p {
+      margin: 5px 0;
+    }
+
+    /* Failed Cards Section */
+    .failed-cards {
+      border: 1px solid #f5c6cb;
+      background-color: #f8d7da;
+      color: #721c24;
+      padding: 15px;
+      border-radius: 4px;
+    }
+
+    .failed-cards ul {
+      list-style-type: disc;
+      margin-left: 20px;
+    }
+
+    /* Back Button Styling */
+    .back-button {
+      display: inline-block;
+      margin-top: 20px;
+      color: #007bff;
+      text-decoration: none;
+      font-size: 1em;
+    }
+
+    .back-button:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Augmented MTG Card List</h1>
+
+    <!-- Action Buttons -->
+    <button id="copyButton">Copy to Clipboard</button>
+    <button id="clearCacheButton">Clear Cache</button>
+
+    <!-- Card List -->
+    <div class="card-list">
+      <% data.categories.forEach(category => { %>
+        <div class="category">
+          <% if (category.name.trim() !== 'Uncategorized') { %>
+            <div class="category-name"><%= category.name %></div>
+          <% } else { %>
+            <div class="category-name" style="display: none;"></div>
+          <% } %>
+
+          <% category.cards.forEach(card => { %>
+            <div class="card">
+              <div class="card-name"><%= card.count %>x <%= card.name %></div>
+              <div class="card-details">
+                <p><strong>Mana Cost:</strong> <%= card.mana_cost %></p>
+                <p><strong>Description:</strong> <%= card.description %></p>
+                <p><strong>Price (Nonfoil USD):</strong> <%= card.usd %></p>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% }) %>
+    </div>
+
+    <!-- Failed Cards Section -->
+    <% if (failedCards && failedCards.length > 0) { %>
+      <div class="failed-cards">
+        <h2>Failed to Fetch the Following Cards:</h2>
+        <ul>
+          <% failedCards.forEach(card => { %>
+            <li><strong><%= card.name %></strong>: <%= card.error %></li>
+          <% }) %>
+        </ul>
+      </div>
+    <% } %>
+
+    <!-- Back Button -->
+    <a href="/" class="back-button">&#8592; Back</a>
+
+    <!-- JavaScript for Button Functionality -->
+    <script>
+      // Function to copy text to clipboard using the Clipboard API
+      document.getElementById('copyButton').addEventListener('click', function() {
+        // Prepare the text to copy
+        let outputText = '';
+        <% data.categories.forEach(category => { %>
+          <% if (category.name.trim() !== 'Uncategorized') { %>
+            outputText += `<%= category.name %>\n`;
+          <% } %>
+          <% category.cards.forEach(card => { %>
+            outputText += `<%= card.count %>x <%= card.name %>\n`;
+            outputText += `  Mana Cost: <%= card.mana_cost %>\n`;
+            outputText += `  Description: <%= card.description.replace(/\n/g, '\\n') %>\n`;
+            outputText += `  Price (Nonfoil USD): <%= card.usd %>\n\n`;
+          <% }) %>
+        <% }) %>
+
+        navigator.clipboard.writeText(outputText).then(function() {
+          alert('Output copied to clipboard!');
+        }, function(err) {
+          console.error('Could not copy text: ', err);
+          alert('Error copying the output.');
+        });
+      });
+
+      // Function to clear the cache
+      document.getElementById('clearCacheButton').addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear the cache? This action cannot be undone.')) {
+          fetch('/clear-cache', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ confirm: true })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('Cache has been successfully cleared.');
+              // Optionally, you can reload the page or redirect
+              window.location.reload();
+            } else {
+              alert('Failed to clear cache.');
+            }
+          })
+          .catch(error => {
+            console.error('Error clearing cache:', error);
+            alert('An error occurred while clearing the cache.');
+          });
+        }
+      });
+    </script>
+  </div>
+</body>
+</html>
+
+<file_end>
+
