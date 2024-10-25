@@ -101,6 +101,32 @@
     .back-button:hover {
       text-decoration: underline;
     }
+    .price-totals {
+    background-color: #e9ecef;
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .price-totals h2 {
+      margin-top: 0;
+      color: #2c3e50;
+    }
+
+    .price-total {
+      font-size: 1.2em;
+      margin: 10px 0;
+    }
+
+    .grand-total {
+      font-size: 1.4em;
+      color: #2c3e50;
+      font-weight: bold;
+      border-top: 2px solid #dee2e6;
+      padding-top: 10px;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -110,7 +136,20 @@
     <!-- Action Buttons -->
     <button id="copyButton">Copy to Clipboard</button>
     <button id="clearCacheButton">Clear Cache</button>
-
+    <!-- Price Total -->
+    <div class="price-totals">
+      <h2>Price Summary</h2>
+      <% data.categories.forEach(category => { %>
+        <% if (category.categoryTotal > 0) { %>
+          <div class="price-total">
+            <strong><%= category.name %>:</strong> $<%= category.categoryTotal %>
+          </div>
+        <% } %>
+      <% }) %>
+      <div class="grand-total">
+        Total Deck Value: $<%= grandTotal %>
+      </div>
+    </div>
     <!-- Card List -->
     <div class="card-list">
       <% data.categories.forEach(category => { %>
@@ -154,8 +193,18 @@
     <script>
       // Function to copy text to clipboard using the Clipboard API
       document.getElementById('copyButton').addEventListener('click', function() {
-        // Prepare the text to copy
         let outputText = '';
+  
+        // Add price totals to the output
+        outputText += 'Price Summary:\n';
+        <% data.categories.forEach(category => { %>
+          <% if (category.categoryTotal > 0) { %>
+            outputText += `${category.name}: $${category.categoryTotal}\n`;
+          <% } %>
+        <% }) %>
+        outputText += `Total Deck Value: $${grandTotal}\n\n`;
+        
+        // Add existing card details
         <% data.categories.forEach(category => { %>
           <% if (category.name.trim() !== 'Uncategorized') { %>
             outputText += `<%= category.name %>\n`;

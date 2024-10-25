@@ -34,6 +34,8 @@ app.get('/', (req, res) => {
   res.render('index');
 });
 
+// Then modify the /augment route to pass the totals to the template:
+
 app.post('/augment', async (req, res) => {
   console.log('Starting /augment route');
   const inputText = req.body.inputText;
@@ -65,11 +67,15 @@ app.post('/augment', async (req, res) => {
     console.log('Cards fetched. Successful:', augmentedCards.length, 'Failed:', failedCards.length);
 
     console.log('Reconstructing categories...');
-    const augmentedCategories = reconstructCategories(augmentedCards);
-    console.log('Categories reconstructed');
+    const { categories, grandTotal } = reconstructCategories(augmentedCards);
+    console.log('Categories reconstructed. Total price:', grandTotal);
 
     console.log('Rendering result page');
-    res.render('result', { data: { categories: augmentedCategories }, failedCards });
+    res.render('result', { 
+      data: { categories }, 
+      failedCards,
+      grandTotal
+    });
   } catch (error) {
     console.error('Error in /augment route:', error);
     res.status(500).send(`An error occurred while processing the cards: ${error.message}`);
@@ -242,15 +248,41 @@ async function fetchCardInfo(name, set) {
 
 function reconstructCategories(augmentedCards) {
   const categoriesMap = {};
+  let grandTotal = 0;
 
   augmentedCards.forEach(card => {
     if (!categoriesMap[card.category]) {
-      categoriesMap[card.category] = { name: card.category, cards: [] };
+      categoriesMap[card.category] = { 
+        name: card.category, 
+        cards: [],
+        categoryTotal: 0 
+      };
     }
+    
+    // Calculate price for this card (count * price)
+    const cardPrice = card.usd !== 'N/A' ? 
+      parseFloat(card.usd) * card.count : 
+      0;
+    
+    // Add to category total
+    categoriesMap[card.category].categoryTotal += cardPrice;
+    
+    // Add to grand total
+    grandTotal += cardPrice;
+    
+    // Add the card to its category
     categoriesMap[card.category].cards.push(card);
   });
 
-  return Object.values(categoriesMap);
+  // Convert the totals to fixed decimal strings
+  Object.values(categoriesMap).forEach(category => {
+    category.categoryTotal = category.categoryTotal.toFixed(2);
+  });
+
+  return {
+    categories: Object.values(categoriesMap),
+    grandTotal: grandTotal.toFixed(2)
+  };
 }
 
 // Route to clear the cache
