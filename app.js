@@ -34,6 +34,15 @@ app.get('/', (req, res) => {
   res.render('index');
 });
 
+
+// Add a new route to handle display preferences:
+app.post('/set-preferences', (req, res) => {
+  const { showPrices } = req.body;
+  // In a real app, you'd want to store this in a session or user preferences
+  // For now, we'll just send back a success response
+  res.json({ success: true });
+});
+
 // Then modify the /augment route to pass the totals to the template:
 
 app.post('/augment', async (req, res) => {
@@ -184,6 +193,7 @@ async function fetchCardsWithRateLimit(cards, delayMs) {
       augmentedCards.push({
         ...card,
         mana_cost: info.mana_cost || 'N/A',
+        type_line: info.type_line || 'N/A',  // Added type_line
         description: info.oracle_text || 'N/A',
         usd: info.usd || 'N/A',
         usd_foil: info.usd_foil || 'N/A'
@@ -195,6 +205,7 @@ async function fetchCardsWithRateLimit(cards, delayMs) {
       augmentedCards.push({
         ...card,
         mana_cost: 'N/A',
+        type_line: 'N/A',  // Added type_line
         description: 'N/A',
         usd: 'N/A',
         usd_foil: 'N/A'
@@ -234,6 +245,7 @@ async function fetchCardInfo(name, set) {
     const cardInfo = {
       mana_cost: data.mana_cost || 'N/A',
       oracle_text: data.oracle_text || 'N/A',
+      type_line: data.type_line || 'N/A',  // Added type_line
       usd: data.prices.usd || 'N/A',
       usd_foil: data.prices.usd_foil || 'N/A'
     };
@@ -245,6 +257,7 @@ async function fetchCardInfo(name, set) {
     throw error;
   }
 }
+
 
 function reconstructCategories(augmentedCards) {
   const categoriesMap = {};

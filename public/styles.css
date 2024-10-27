@@ -1,69 +1,205 @@
-/* public/styles.css */
-
+/* Base styles - existing */
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
-    margin: 0;
-    padding: 20px;
-  }
-  
-  .container {
-    max-width: 800px;
-    margin: auto;
-    background: #fff;
-    padding: 20px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  }
-  
-  h1 {
-    text-align: center;
-    color: #333;
-  }
-  
-  textarea {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-family: monospace;
-  }
-  
-  button {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    background: #28a745;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-  }
-  
-  button:hover {
-    background: #218838;
-  }
-  
-  pre {
-    white-space: pre-wrap;       /* Wrap lines */
-    word-wrap: break-word;       /* Break long words */
-    max-height: 80vh;            /* Max height */
-    overflow: auto;              /* Scroll if necessary */
-    background-color: #f8f9fa;   /* Light background for readability */
-    padding: 15px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-  }
-  
-  a {
-    display: inline-block;
-    margin-top: 20px;
-    color: #007bff;
-    text-decoration: none;
-  }
-  
-  a:hover {
-    text-decoration: underline;
-  }
-  
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 800px;
+  margin: auto;
+  background: #fff;
+  padding: 20px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+  text-align: center;
+  color: #333;
+}
+
+/* Form elements - existing */
+textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+button:hover {
+  background: #218838;
+}
+
+/* Action buttons */
+.action-buttons {
+  margin-bottom: 20px;
+}
+
+.action-button {
+  display: inline-block;
+  padding: 10px 20px;
+  margin-right: 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #fff;
+  width: auto;
+}
+
+.action-button--copy {
+  background-color: #007bff;
+}
+
+.action-button--copy:hover {
+  background-color: #0056b3;
+}
+
+.action-button--clear {
+  background-color: #dc3545;
+}
+
+.action-button--clear:hover {
+  background-color: #c82333;
+}
+
+/* Display controls */
+.display-controls {
+  margin: 20px 0;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.display-control {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 20px;
+  cursor: pointer;
+}
+
+.display-control input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+/* Price totals */
+.price-totals {
+  background-color: #e9ecef;
+  padding: 15px;
+  margin: 20px 0;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.price-totals h2 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.price-total {
+  font-size: 1.2em;
+  margin: 10px 0;
+}
+
+.grand-total {
+  font-size: 1.4em;
+  color: #2c3e50;
+  font-weight: bold;
+  border-top: 2px solid #dee2e6;
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+/* Card list */
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.category {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  background-color: #f9f9f9;
+}
+
+.category-name {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+  color: #333;
+  border-bottom: 2px solid #ccc;
+  padding-bottom: 5px;
+}
+
+.card {
+  margin-bottom: 15px;
+}
+
+.card-name {
+  font-weight: bold;
+  font-size: 1.2em;
+  color: #2c3e50;
+}
+
+.card-details {
+  margin-left: 20px;
+  margin-top: 5px;
+}
+
+.card-details p {
+  margin: 5px 0;
+}
+
+.price-info {
+  transition: opacity 0.3s ease;
+}
+
+/* Failed cards section */
+.failed-cards {
+  border: 1px solid #f5c6cb;
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.failed-cards ul {
+  list-style-type: disc;
+  margin-left: 20px;
+}
+
+/* Back button */
+.back-button {
+  display: inline-block;
+  margin-top: 20px;
+  color: #007bff;
+  text-decoration: none;
+  font-size: 1em;
+}
+
+.back-button:hover {
+  text-decoration: underline;
+}
+
+/* Utility classes */
+.hidden {
+  display: none;
+}
