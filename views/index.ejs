@@ -16,6 +16,27 @@
       <br>
       <button type="submit">Augment List</button>
     </form>
+
+    <div class="search-section">
+      <h2>Scryfall Search</h2>
+      <form action="/search" method="POST" id="searchForm">
+        <div class="search-controls">
+          <label for="searchLimit">Results per query:</label>
+          <input type="number" id="searchLimit" name="limit" value="30" min="1" max="100" class="number-input">
+        </div>
+        <div id="queryContainer">
+          <div class="query-input">
+            <textarea name="queries[]" rows="3" cols="100" 
+              placeholder="Enter Scryfall query string...&#10;Example: id<=ubr (oracle:destroy OR oracle:counter OR oracle:exile)"
+              class="query-textarea"></textarea>
+            <button type="button" class="remove-query" onclick="removeQuery(this)">Remove</button>
+          </div>
+        </div>
+        <button type="button" onclick="addQuery()" class="secondary-button">Add Another Query</button>
+        <button type="submit" class="primary-button">Search Cards</button>
+      </form>
+    </div>
   </div>
+  <script src="/script.js"></script>
 </body>
 </html>

@@ -203,3 +203,78 @@ button:hover {
 .hidden {
   display: none;
 }
+/* Add to public/styles.css */
+
+.search-section {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 2px solid #ccc;
+}
+
+.search-controls {
+  margin-bottom: 20px;
+}
+
+.number-input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 80px;
+  margin-left: 10px;
+}
+
+.query-input {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  align-items: flex-start;
+}
+
+.query-textarea {
+  flex-grow: 1;
+}
+
+.remove-query {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: auto;
+}
+
+.remove-query:hover {
+  background-color: #c82333;
+}
+
+.secondary-button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 10px;
+  width: auto;
+  display: inline-block;
+}
+
+.secondary-button:hover {
+  background-color: #5a6268;
+}
+
+.primary-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: auto;
+  display: inline-block;
+}
+
+.primary-button:hover {
+  background-color: #218838;
+}

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Scryfall Search Results</h1>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button id="copyButton" class="action-button action-button--copy">Copy to Clipboard</button>
+        </div>
+
+        <!-- Display Controls -->
+        <div class="display-controls">
+            <label class="display-control">
+                <input type="checkbox" id="showPrices" checked>
+                Show Prices
+            </label>
+        </div>
+
+        <!-- Price Totals -->
+        <div class="price-totals">
+            <h2>Price Summary</h2>
+            <% data.categories.forEach(category => { %>
+                <% if (category.categoryTotal > 0) { %>
+                    <div class="price-total">
+                        <strong><%= category.name %></strong>: $<%= category.categoryTotal %>
+                    </div>
+                <% } %>
+            <% }) %>
+            <div class="grand-total">
+                Total Value: $<%= grandTotal %>
+            </div>
+        </div>
+
+        <!-- Search Results -->
+        <div class="card-list">
+            <% data.categories.forEach(category => { %>
+                <div class="category">
+                    <div class="category-name"><%= category.name %></div>
+                    <% category.cards.forEach(card => { %>
+                        <div class="card">
+                            <div class="card-name">
+                                <%= card.name %> - <%= card.type_line %>
+                            </div>
+                            <div class="card-details">
+                                <p><strong>Mana Cost:</strong> <%= card.mana_cost %></p>
+                                <p><strong>Type:</strong> <%= card.type_line %></p>
+                                <p><strong>Description:</strong> <%= card.description %></p>
+                                <p class="price-info">
+                                    <strong>Price (Nonfoil USD):</strong> <%= card.usd %>
+                                </p>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+            <% }) %>
+        </div>
+
+        <!-- Failed Queries -->
+        <% if (failedQueries && failedQueries.length > 0) { %>
+            <div class="failed-cards">
+                <h2>Failed Queries:</h2>
+                <ul>
+                    <% failedQueries.forEach(query => { %>
+                        <li><strong><%= query.query %></strong>: <%= query.error %></li>
+                    <% }) %>
+                </ul>
+            </div>
+        <% } %>
+
+        <!-- Back Button -->
+        <a href="/" class="back-button">&#8592; Back</a>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>

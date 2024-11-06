@@ -43,6 +43,65 @@ app.post('/set-preferences', (req, res) => {
   res.json({ success: true });
 });
 
+// New route for search results
+app.post('/search', async (req, res) => {
+  console.log('Starting /search route');
+  const { queries, limit = 30 } = req.body;
+  
+  if (!queries || queries.length === 0) {
+    return res.status(400).send('No search queries provided');
+  }
+
+  try {
+    const results = [];
+    const failedQueries = [];
+
+    for (const query of queries) {
+      try {
+        const searchUrl = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}%20sort:edhrec&order=desc&unique=cards`;
+        const response = await axios.get(searchUrl);
+        
+        // Get only the specified number of cards
+        const cards = response.data.data.slice(0, limit).map(card => ({
+          name: card.name,
+          mana_cost: card.mana_cost || 'N/A',
+          type_line: card.type_line || 'N/A',
+          description: card.oracle_text || 'N/A',
+          usd: card.prices.usd || 'N/A',
+          usd_foil: card.prices.usd_foil || 'N/A',
+          count: 1 // For compatibility with existing template
+        }));
+
+        results.push({
+          name: `Results for: ${query}`,
+          cards: cards,
+          categoryTotal: cards.reduce((sum, card) => 
+            sum + (card.usd !== 'N/A' ? parseFloat(card.usd) : 0), 0).toFixed(2)
+        });
+
+        // Rate limiting
+        await delay(100);
+      } catch (error) {
+        console.error(`Error searching for query "${query}":`, error.message);
+        failedQueries.push({ query, error: error.response?.data?.details || error.message });
+      }
+    }
+
+    // Calculate grand total
+    const grandTotal = results.reduce((sum, category) => 
+      sum + parseFloat(category.categoryTotal), 0).toFixed(2);
+
+    res.render('search-result', { 
+      data: { categories: results }, 
+      failedQueries,
+      grandTotal
+    });
+  } catch (error) {
+    console.error('Error in /search route:', error);
+    res.status(500).send(`An error occurred while processing the searches: ${error.message}`);
+  }
+});
+
 // Then modify the /augment route to pass the totals to the template:
 
 app.post('/augment', async (req, res) => {
