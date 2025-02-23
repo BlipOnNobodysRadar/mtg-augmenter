@@ -135,14 +135,15 @@ app.post('/augment', async (req, res) => {
     console.log('Cards fetched. Successful:', augmentedCards.length, 'Failed:', failedCards.length);
 
     console.log('Reconstructing categories...');
-    const { categories, grandTotal } = reconstructCategories(augmentedCards);
-    console.log('Categories reconstructed. Total price:', grandTotal);
+    const { categories, grandTotal, totalCards } = reconstructCategories(augmentedCards);
+    console.log('Categories reconstructed. Total price:', grandTotal, 'Total cards:', totalCards);
 
     console.log('Rendering result page');
     res.render('result', { 
       data: { categories }, 
       failedCards,
-      grandTotal
+      grandTotal,
+      totalCards
     });
   } catch (error) {
     console.error('Error in /augment route:', error);
@@ -321,13 +322,15 @@ async function fetchCardInfo(name, set) {
 function reconstructCategories(augmentedCards) {
   const categoriesMap = {};
   let grandTotal = 0;
+  let totalCards = 0;
 
   augmentedCards.forEach(card => {
     if (!categoriesMap[card.category]) {
       categoriesMap[card.category] = { 
         name: card.category, 
         cards: [],
-        categoryTotal: 0 
+        categoryTotal: 0,
+        cardCount: 0
       };
     }
     
@@ -338,6 +341,10 @@ function reconstructCategories(augmentedCards) {
     
     // Add to category total
     categoriesMap[card.category].categoryTotal += cardPrice;
+    
+    // Add to card counts
+    categoriesMap[card.category].cardCount += card.count;
+    totalCards += card.count;
     
     // Add to grand total
     grandTotal += cardPrice;
@@ -353,7 +360,8 @@ function reconstructCategories(augmentedCards) {
 
   return {
     categories: Object.values(categoriesMap),
-    grandTotal: grandTotal.toFixed(2)
+    grandTotal: grandTotal.toFixed(2),
+    totalCards
   };
 }
 

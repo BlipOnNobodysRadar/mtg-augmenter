@@ -27,16 +27,20 @@
 
     <!-- Price Totals -->
     <div class="price-totals">
-      <h2>Price Summary</h2>
+      <h2>Summary</h2>
       <% data.categories.forEach(category => { %>
-        <% if (category.categoryTotal > 0) { %>
-          <div class="price-total">
-            <strong><%= category.name %>:</strong> $<%= category.categoryTotal %>
-          </div>
-        <% } %>
+        <div class="price-total">
+          <strong><%= category.name %>:</strong> 
+          <%= category.cardCount %> cards - 
+          <% if (category.categoryTotal > 0) { %>
+            $<%= category.categoryTotal %>
+          <% } else { %>
+            Price N/A
+          <% } %>
+        </div>
       <% }) %>
       <div class="grand-total">
-        Total Deck Value: $<%= grandTotal %>
+        Total: <%= totalCards %> cards - $<%= grandTotal %>
       </div>
     </div>
 
@@ -45,7 +49,9 @@
       <% data.categories.forEach(category => { %>
         <div class="category">
           <% if (category.name.trim() !== 'Uncategorized') { %>
-            <div class="category-name"><%= category.name %></div>
+            <div class="category-name">
+              <%= category.name %> (<%= category.cardCount %> cards)
+            </div>
           <% } %>
 
           <% category.cards.forEach(card => { %>
